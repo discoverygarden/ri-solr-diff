@@ -13,18 +13,20 @@ This program requires:
 
 ## Installation
 
-This program can be installed a few different ways:
-* If the [setuptools](https://pypi.python.org/pypi/setuptools) is installed, one can run:
+It is recommended to install this utility inside of a [virtualenv](http://virtualenv.readthedocs.org/en/latest/) virtual Python environment.
+
+This program can be relatively easily installed two very similar ways, which should take care of installing the required dependencies:
+* If [pip](https://pypi.python.org/pypi/pip) is installed, one can run:
+```bash
+pip install git+https://github.com/discoverygarden/ri-solr-diff
+```
+* If just [setuptools](https://pypi.python.org/pypi/setuptools) is installed, one can run:
 ```bash
 git clone https://github.com/discoverygarden/ri-solr-diff
 cd ri-solr-diff
 python setup.py install
 ```
-* If [pip](https://pypi.python.org/pypi/pip) is installed, one can run:
-```bash
 
-pip install https://github.com/discoverygarden/ri-solr-diff
-```
 
 ## Usage
 
