@@ -15,6 +15,6 @@ setup(
   scripts=['bin/ri-solr-diff.py'],
   install_requires=[
     'requests',
-    'python-dateutil',
-  ],
+    'python-dateutil'
+  ]
 )
