@@ -141,8 +141,12 @@ class gsearch:
         self.password = password
         self.session = requests.Session()
         self.session.auth = (self.user, self.password)
+        self.updated = False
 
     def update_pid(self, pid):
+        if not self.updated:
+          self.updated = True
+
         data = {
           'operation': 'updateIndex',
           'action': 'fromPid',
@@ -222,3 +226,8 @@ if __name__ == '__main__':
         # reindexing.
         logger.debug('Solr, leftover: %s' % ri_pid)
         gsearch.update_pid(solr_pid)
+
+    if gsearch.updated:
+        exit(1)
+    else:
+        exit(0)
