@@ -87,7 +87,9 @@ ORDER BY ?timestamp ?obj
               break
 
             for result in query_result['results']:
-                yield (result['obj'].split('info:fedora/')[1], result['timestamp'], dateutil.parser.parse(result['timestamp']))
+                yield (result['obj'].split('info:fedora/')[1], dateutil.parser.parse(result['timestamp']))
+
+            # Grab the last timestamp, to start from it.
             self.start = query_result['results'][-1]['timestamp']
 
             replacements['filter'] = 'FILTER(?timestamp > "%s"^^<http://www.w3.org/2001/XMLSchema#dateTime>)' % (self.start)
@@ -124,8 +126,9 @@ class solr_generator:
               break
 
             for result in query_results['response']['docs']:
-                yield (result['PID'], result[self.field], dateutil.parser.parse(result[self.field]))
+                yield (result['PID'], dateutil.parser.parse(result[self.field]))
 
+            # Grab the last timestamp, to start from it.
             self.start = query_results['response']['docs'][-1][self.field]
 
             params['fq'] = ["%s:{%s TO *}" % (self.field, self.start)]
@@ -179,8 +182,8 @@ if __name__ == '__main__':
         solr_result = solr.next()
 
         while ri_result and solr_result:
-            ri_pid, ri_timestring, ri_time = ri_result
-            solr_pid, solr_timestring, solr_time = solr_result
+            ri_pid, ri_time = ri_result
+            solr_pid, solr_time = solr_result
 
             if ri_time < solr_time:
                 logging.debug('RI older, update %s.' % ri_pid)
@@ -208,12 +211,12 @@ if __name__ == '__main__':
     except StopIteration:
         pass
 
-    for ri_pid, ri_timestring, ri_time in ri:
+    for ri_pid, ri_time in ri:
         #Stuff left over from RI... Reindex.
         logger.debug('RI, leftover: %s' % ri_pid)
         gsearch.update_pid(ri_pid)
 
-    for solr_pid, solr_timestring, solr_time in solr:
+    for solr_pid, solr_time in solr:
         # Stuff left over from Solr. Recently indexed and purged, but index
         # failed to update... Should probably delete...  Let's just try
         # reindexing.
