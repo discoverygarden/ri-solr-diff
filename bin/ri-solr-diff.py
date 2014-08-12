@@ -1,4 +1,4 @@
-#!/usr/sbin/env python
+#!/usr/bin/env python
 
 import dateutil.parser
 import time
@@ -17,13 +17,13 @@ parser = argparse.ArgumentParser(
 )
 # Connection arguments
 parser.add_argument('--ri', default="http://localhost:8080/fedora/risearch", help='URL of the resource index at the host. (default: %(default)s)')
-parser.add_argument('--ri-user', default='fedoraAdmin', help='Username to communicate with resource index, if necessary. (default: %(default)s)')
-parser.add_argument('--ri-pass', default='islandora', help='Password to communicate with resource index, if necessary. (default: %(default)s)')
-parser.add_argument('--solr', default="http://localhost:8080/solr", help='Hostname/IP of the Solr index. (default: %(default)s)')
+parser.add_argument('--ri-user', default='fedoraAdmin', help='Username to communicate with resource index. (default: %(default)s)')
+parser.add_argument('--ri-pass', default='islandora', help='Password to communicate with resource index. (default: %(default)s)')
+parser.add_argument('--solr', default="http://localhost:8080/solr", help='URL of the Solr end-point. (default: %(default)s)')
 parser.add_argument('--solr-last-modified-field', default='fgs_lastModifiedDate_dt', help='The Solr field storing the last modified date of each object. (default: %(default)s)')
-parser.add_argument('--gsearch', default="http://localhost:8080/fedoragsearch/rest", help="Hostname/IP of GSearch (default: %(default)s)")
-parser.add_argument('--gsearch-user', default='fedoraAdmin', help='Username to communicate with GSearch servelet, if necessary. (default: %(default)s)')
-parser.add_argument('--gsearch-pass', default='islandora', help='Password to communicate with GSearch servelet, if necessary. (default: %(default)s)')
+parser.add_argument('--gsearch', default="http://localhost:8080/fedoragsearch/rest", help="URL of the GSearch end-point. (default: %(default)s)")
+parser.add_argument('--gsearch-user', default='fedoraAdmin', help='Username to communicate with GSearch servelet. (default: %(default)s)')
+parser.add_argument('--gsearch-pass', default='islandora', help='Password to communicate with GSearch servelet. (default: %(default)s)')
 parser.add_argument('--query-limit', default=10000, type=int, help='The number of results which will be fetched from the RI and Solr at a time. (default: %(default)s)')
 
 # Application switches
