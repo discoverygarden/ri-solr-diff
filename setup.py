@@ -3,15 +3,18 @@
 from distutils.core import setup
 
 setup(
-  name='Resource Index/Solr Sync',
+  name='ri-solr-diff',
   version='1.0',
   description='Sync Solr index by examining Resource Index.',
   long_description='Ensure a Solr index is up-to-date with a Fedora Commons installation, based on the contents of the Resource Index.',
-  author='discoverygarden Inc.',
-  author_email='dev@discoverygarden.ca',
+  author='Adam Vessey',
+  author_email='adam@discoverygarden.ca',
+  maintainer='discoverygarden Inc.',
+  maintainer_email='dev@discoverygarden.ca',
+  url='http://github.com/discoverygarden/ri-solr-diff',
   scripts=['bin/ri-solr-diff.py'],
-  requires=[
+  install_requires=[
     'requests',
-    'dateutil',
+    'python-dateutil',
   ],
 )
