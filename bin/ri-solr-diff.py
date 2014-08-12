@@ -5,20 +5,23 @@ import time
 import requests
 import argparse
 import logging
-import json as asdf
-logging.basicConfig(format='%(asctime)s - %(message)s', datefmt='%s')
+import json
+logging.basicConfig(format='%(asctime)s - %(message)s', datefmt='%s', level=logging.INFO)
+
+# requests is kind of noisy by default... Let's shut it up.
+logging.getLogger('requests').setLevel(logging.WARNING)
 
 parser = argparse.ArgumentParser(description='Identify and resolve differences between a Fedora Resource and Solr index.')
 # Connection arguments
-parser.add_argument('--ri', default="http://localhost:8080/fedora/risearch", help='URL of the resource index at the host.')
-parser.add_argument('--ri-user', default='fedoraAdmin', help='Username to communicate with resource index, if necessary.')
-parser.add_argument('--ri-pass', default='islandora', help='Password to communicate with resource index, if necessary.')
-parser.add_argument('--solr', default="http://localhost:8080/solr", help='Hostname/IP of the Solr index.')
-parser.add_argument('--solr-last-modified-field', dest='solr_field', default='fgs_lastModifiedDate_dt', help='The Solr field storing the last modified date of each object.')
-parser.add_argument('--gsearch', default="http://localhost:8080/fedoragsearch/rest", help="Hostname/IP of GSearch")
-parser.add_argument('--gsearch-user', default='fedoraAdmin', help='Username to communicate with GSearch servelet, if necessary.')
-parser.add_argument('--gsearch-pass', default='islandora', help='Password to communicate with GSearch servelet, if necessary.')
-parser.add_argument('--query-limit', default=10000, type=int, help='The number of results which will be fetched from the RI and Solr at a time.')
+parser.add_argument('--ri', default="http://localhost:8080/fedora/risearch", help='URL of the resource index at the host. (default: %(default)s)')
+parser.add_argument('--ri-user', default='fedoraAdmin', help='Username to communicate with resource index, if necessary. (default: %(default)s)')
+parser.add_argument('--ri-pass', default='islandora', help='Password to communicate with resource index, if necessary. (default: %(default)s)')
+parser.add_argument('--solr', default="http://localhost:8080/solr", help='Hostname/IP of the Solr index. (default: %(default)s)')
+parser.add_argument('--solr-last-modified-field', default='fgs_lastModifiedDate_dt', help='The Solr field storing the last modified date of each object. (default: %(default)s)')
+parser.add_argument('--gsearch', default="http://localhost:8080/fedoragsearch/rest", help="Hostname/IP of GSearch (default: %(default)s)")
+parser.add_argument('--gsearch-user', default='fedoraAdmin', help='Username to communicate with GSearch servelet, if necessary. (default: %(default)s)')
+parser.add_argument('--gsearch-pass', default='islandora', help='Password to communicate with GSearch servelet, if necessary. (default: %(default)s)')
+parser.add_argument('--query-limit', default=10000, type=int, help='The number of results which will be fetched from the RI and Solr at a time. (default: %(default)s)')
 
 # Application switches
 group = parser.add_mutually_exclusive_group(required=True)
@@ -26,6 +29,8 @@ group.add_argument('--all', help='Compare all objects.', action='store_true')
 group.add_argument('--last-n-days', type=int, help='Compare objects modified in the last n days.')
 group.add_argument('--last-n-seconds', type=int, help='Compare objects modified in the last n seconds.')
 group.add_argument('--since', type=int, help='Compare objects modified since the given Unix timestamp.')
+
+parser.add_argument('--verbose', '-v', default=0, action='count', help='Adjust verbosity of output. More times == more verbose.') 
 
 class ri_generator:
     def __init__(self, url, user=None, password=None, start=None, limit=10000):
@@ -47,7 +52,17 @@ SELECT ?obj ?timestamp
 FROM <#ri>
 WHERE {
   ?obj <fedora-model:hasModel> <info:fedora/fedora-system:FedoraObject-3.0> ;
+       <fedora-model:state> <fedora-model:Active> ;
        <fedora-view:lastModifiedDate> ?timestamp .
+  OPTIONAL {
+    ?obj <fedora-view:disseminates> ?exclude .
+    {
+      ?exclude <fedora-view:disseminationType> <info:fedora/*/DS-COMPOSITE-MODEL> .
+    } UNION {
+      ?exclude <fedora-view:disseminationType> <info:fedora/*/METHODMAP> .
+    }
+  }
+  FILTER(!bound(?exclude))
   %(filter)s
 }
 ORDER BY ?timestamp ?obj
@@ -56,56 +71,64 @@ ORDER BY ?timestamp ?obj
             'type': 'tuples',
             'format': 'json',
             'lang': 'sparql',
-            'query': query % replacements
+            'query': query % replacements,
+            'limit': self.limit
         }
-        r = requests.post(self.url, auth=(self.user, self.password), data=data)
+        s = requests.Session()
+        s.auth = (self.user, self.password)
+        r = s.post(self.url, data=data)
 
         while r.status_code == requests.codes.ok:
-            print(r.content)
-            json = r.json()
+            # XXX: Seems to be some weird encoding issue preventing r.json()
+            # from working?
+            query_result = json.loads(r.text)
 
-            if len(json['results']) == 0:
+            if len(query_result['results']) == 0:
               break
 
-            for result in json['results']:
+            for result in query_result['results']:
                 yield (result['obj'].split('info:fedora/')[1], result['timestamp'], dateutil.parser.parse(result['timestamp']))
-            self.start = json['results'][-1]['timestamp']
+            self.start = query_result['results'][-1]['timestamp']
 
             replacements['filter'] = 'FILTER(?timestamp > "%s"^^<http://www.w3.org/2001/XMLSchema#dateTime>)' % (self.start)
             data['query'] = query % replacements
-            r = requests.post(self.url, auth=(self.user, self.password), data=data)
+            r = s.post(self.url, data=data)
 
 class solr_generator:
     def __init__(self, url, field, start=None, limit=10000):
-        self.url = url
+        self.base_url = url
+        self.url = "%s/select" % url
         self.field = field
         self.start = start
-        self.limit = 10000
+        self.limit = limit
 
     def __iter__(self):
         params = {
-          'sort': '%s asc PID asc' % self.field,
+          'q': '*:*',
+          'sort': '%s asc, PID asc' % self.field,
           'wt': 'json',
           'fl': 'PID %s' % self.field,
           'rows': self.limit
         }
         if self.start is not None:
-            params['fq'] = "%s:{%s TO *}" % (self.field, self.start)
+            params['fq'] = ["%s:{%s TO *}" % (self.field, self.start)]
 
         r = requests.post(self.url, data=params)
 
         while r.status_code == requests.codes.ok:
-            json = r.json()
+            # XXX: Seems to be some weird encoding issue preventing r.json()
+            # from working?
+            query_results = json.loads(r.text)
 
-            if json['response']['numFound'] == 0:
+            if query_results['response']['numFound'] == 0:
               break
 
-            for result in json['response']['docs']:
+            for result in query_results['response']['docs']:
                 yield (result['PID'], result[self.field], dateutil.parser.parse(result[self.field]))
 
-            self.start = json['response']['docs'][-1][self.field]
+            self.start = query_results['response']['docs'][-1][self.field]
 
-            params['fq'] = "%s:{%s TO *}" % (self.field, self.start)
+            params['fq'] = ["%s:{%s TO *}" % (self.field, self.start)]
             r = requests.post(self.url, data=params)
 
 class gsearch:
@@ -113,6 +136,8 @@ class gsearch:
         self.url = url
         self.user = user
         self.password = password
+        self.session = requests.Session()
+        self.session.auth = (self.user, self.password)
 
     def update_pid(self, pid):
         data = {
@@ -121,8 +146,8 @@ class gsearch:
           'value': pid
         }
         logging.debug('Attempting to update %s...' % pid)
-        r = request.post(self.url, auth=(self.user, self.password), data=data)
-        if r.status_code == requests.code.ok:
+        r = self.session.post(self.url, data=data)
+        if r.status_code == requests.codes.ok:
             logging.debug('Updated %s' % pid)
             logging.info(pid)
         else:
@@ -130,6 +155,7 @@ class gsearch:
 
 if __name__ == '__main__':
     args = parser.parse_args()
+    logging.getLogger().setLevel(logging.INFO - args.verbose * 10)
 
     start = None
     timestamp = 0
@@ -145,45 +171,51 @@ if __name__ == '__main__':
         start = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(timestamp))
 
     ri = iter(ri_generator(args.ri, args.ri_user, args.ri_pass, start=start, limit=args.query_limit))
-    solr = iter(solr_generator(args.solr, args.solr_field, start=start, limit=args.query_limit))
+    solr = iter(solr_generator(args.solr, args.solr_last_modified_field, start=start, limit=args.query_limit))
     gsearch = gsearch(args.gsearch, args.gsearch_user, args.gsearch_pass)
 
-    ri_result = ri.next()
-    solr_result = solr.next()
+    try:
+        ri_result = ri.next()
+        solr_result = solr.next()
 
-    while ri_result and solr_result:
-        ri_pid, ri_timestring, ri_time = ri_result
-        solr_pid, solr_timestring, solr_time = solr_result
+        while ri_result and solr_result:
+            ri_pid, ri_timestring, ri_time = ri_result
+            solr_pid, solr_timestring, solr_time = solr_result
 
-        if ri_time < solr_time:
-            gsearch.update_pid(ri_pid)
-            ri_result = ri.next()
-        elif solr_time < ri_time:
-            gsearch.update_pid(solr_pid)
-            solr_result = solr.next()
-        else:
-            # Hit stuff with the same time... Start comparing PIDs.
-            if ri_pid < solr_pid:
+            if ri_time < solr_time:
+                logging.debug('RI older, update %s.' % ri_pid)
                 gsearch.update_pid(ri_pid)
                 ri_result = ri.next()
-            elif solr_pid < ri_pid:
+            elif solr_time < ri_time:
+                logging.debug('Solr older, update %s.' % solr_pid)
                 gsearch.update_pid(solr_pid)
                 solr_result = solr.next()
             else:
-              # Same PID, same time, up-to-date... Skip!
-                ri_result = ri.next()
-                solr_result = solr.next()
+                # Hit stuff with the same time... Start comparing PIDs.
+                if ri_pid < solr_pid:
+                    logging.debug('RI pid, update %s.' % ri_pid)
+                    gsearch.update_pid(ri_pid)
+                    ri_result = ri.next()
+                elif solr_pid < ri_pid:
+                    logging.debug('Solr pid, update %s.' % solr_pid)
+                    gsearch.update_pid(solr_pid)
+                    solr_result = solr.next()
+                else:
+                  # Same PID, same time, up-to-date... Skip!
+                    logging.debug('Docs appear equal for %s.' % ri_pid)
+                    ri_result = ri.next()
+                    solr_result = solr.next()
+    except StopIteration:
+        pass
 
-    while ri_result:
+    for ri_pid, ri_timestring, ri_time in ri:
         #Stuff left over from RI... Reindex.
-        ri_pid, ri_timestring, ri_time = ri_result
+        logger.debug('RI, leftover: %s' % ri_pid)
         gsearch.update_pid(ri_pid)
-        ri_result = ri.next()
 
-    while solr_result:
+    for solr_pid, solr_timestring, solr_time in solr:
         # Stuff left over from Solr. Recently indexed and purged, but index
         # failed to update... Should probably delete...  Let's just try
         # reindexing.
-        solr_pid, solr_timestring, solr_time = solr_result
+        logger.debug('Solr, leftover: %s' % ri_pid)
         gsearch.update_pid(solr_pid)
-        solr_result = solr.next()
