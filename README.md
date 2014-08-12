@@ -27,6 +27,7 @@ cd ri-solr-diff
 python setup.py install
 ```
 
+It is also possible (though more work) to resolve the dependencies of requests and python-dateutil and to make it available when running `ri-solr-diff.py` on its own (or directly through the interpreter, anyway).
 
 ## Usage
 
