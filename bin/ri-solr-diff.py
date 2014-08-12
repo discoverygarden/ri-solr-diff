@@ -38,7 +38,22 @@ log_group.add_argument('--verbose', '-v', default=0, action='count', help='Adjus
 log_group.add_argument('--quiet', '-q', default=0, action='count', help='Adjust verbosity of output. More times == less verbose.')
 
 class ri_generator:
+    """Generator object for Resource Index."""
+
     def __init__(self, url, user=None, password=None, start=None, limit=10000):
+        """
+        Constructor; stash state.
+
+        Arguments:
+        url -- URL to the end-point. Likely something like
+               "http://localhost:8080/fedora/risearch".
+        user -- User name to use to connect.
+        password -- Password to use to connect.
+        start -- Either None or a full ISO 8601 timestamp, like:
+                 "2014-07-12T20:18:12.023Z"
+        limit -- The number of results returned at a time; will affect
+                 memory usage.
+        """
         self.url = url
         self.user = user
         self.password = password
@@ -46,12 +61,21 @@ class ri_generator:
         self.limit = limit
 
     def __iter__(self):
+        """
+        Iterator protocol implementation.
+
+        Yields 2-tuples, each consisting of a PID and a struct_time.
+        """
         replacements = {
           'filter': ''
         }
         if self.start is not None:
             replacements['filter'] = 'FILTER(?timestamp >= "%s"^^<http://www.w3.org/2001/XMLSchema#dateTime>)' % (self.start)
 
+        # XXX: The OPTIONAL/?exclude bit prevents documents we usually avoid
+        # indexing into Solr from being selected. Since they should not be in
+        # the Solr index, we do not need to adjust the Solr query to account
+        # for them.
         query = '''
 SELECT ?obj ?timestamp
 FROM <#ri>
@@ -102,7 +126,22 @@ ORDER BY ?timestamp ?obj
             r = s.post(self.url, data=data)
 
 class solr_generator:
+    """Generator object for Solr index."""
+
     def __init__(self, url, field, start=None, limit=10000):
+        """
+        Constructor; stash state.
+
+        Arguments:
+        url -- URL to the end-point. Likely something like
+               "http://localhost:8080/solr".
+        field -- The Solr field which holds the last modified date of
+                 records.
+        start -- Either None or a full ISO 8601 timestamp, like:
+                 "2014-07-12T20:18:12.023Z"
+        limit -- The number of results returned at a time; will affect
+                 memory usage.
+        """
         self.base_url = url
         self.url = "%s/select" % url
         self.field = field
@@ -110,6 +149,11 @@ class solr_generator:
         self.limit = limit
 
     def __iter__(self):
+        """
+        Iterator protocol implementation.
+
+        Yields 2-tuples, each consisting of a PID and a struct_time.
+        """
         params = {
           'q': '*:*',
           'sort': '%s asc, PID asc' % self.field,
@@ -140,7 +184,18 @@ class solr_generator:
             r = requests.post(self.url, data=params)
 
 class gsearch:
+    """Helper class for prodding GSearch."""
+
     def __init__(self, url, user, password):
+        """
+        Constructor; stash state.
+
+        Arguments:
+        url -- URL to the end-point. Likely something like
+               "http://localhost:8080/fedoragsearch/rest".
+        user -- User name to use to connect.
+        password -- Password to use to connect.
+        """
         self.url = url
         self.user = user
         self.password = password
@@ -149,6 +204,7 @@ class gsearch:
         self.updated = False
 
     def update_pid(self, pid):
+        """Call to GSearch to update the given PID."""
         if not self.updated:
           self.updated = True
 
