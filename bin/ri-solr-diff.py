@@ -11,7 +11,10 @@ logging.basicConfig(format='%(asctime)s - %(message)s', datefmt='%s', level=logg
 # requests is kind of noisy by default... Let's shut it up.
 logging.getLogger('requests').setLevel(logging.WARNING)
 
-parser = argparse.ArgumentParser(description='Identify and resolve differences between a Fedora Resource and Solr index.')
+parser = argparse.ArgumentParser(
+  description='Identify and resolve differences between a Fedora Resource and Solr index.',
+  epilog='Exit code will be "0" if everything was up-to-date. If documents were updated, the exit code will be "1" (though may also be "1" due to runtime errors).'
+)
 # Connection arguments
 parser.add_argument('--ri', default="http://localhost:8080/fedora/risearch", help='URL of the resource index at the host. (default: %(default)s)')
 parser.add_argument('--ri-user', default='fedoraAdmin', help='Username to communicate with resource index, if necessary. (default: %(default)s)')
@@ -30,7 +33,9 @@ group.add_argument('--last-n-days', type=int, help='Compare objects modified in 
 group.add_argument('--last-n-seconds', type=int, help='Compare objects modified in the last n seconds.')
 group.add_argument('--since', type=int, help='Compare objects modified since the given Unix timestamp.')
 
-parser.add_argument('--verbose', '-v', default=0, action='count', help='Adjust verbosity of output. More times == more verbose.') 
+log_group = parser.add_mutually_exclusive_group()
+log_group.add_argument('--verbose', '-v', default=0, action='count', help='Adjust verbosity of output. More times == more verbose.')
+log_group.add_argument('--quiet', '-q', default=0, action='count', help='Adjust verbosity of output. More times == less verbose.')
 
 class ri_generator:
     def __init__(self, url, user=None, password=None, start=None, limit=10000):
@@ -162,7 +167,7 @@ class gsearch:
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    logging.getLogger().setLevel(logging.INFO - args.verbose * 10)
+    logging.getLogger().setLevel(logging.INFO + (-args.verbose + args.quiet) * 10)
 
     start = None
     timestamp = 0
