@@ -12,8 +12,8 @@ logging.basicConfig(format='%(asctime)s - %(message)s', datefmt='%s', level=logg
 logging.getLogger('requests').setLevel(logging.WARNING)
 
 parser = argparse.ArgumentParser(
-  description='Identify and resolve differences between a Fedora Resource and Solr index.',
-  epilog='Exit code will be "0" if everything was up-to-date. If documents were updated, the exit code will be "1" (though may also be "1" due to runtime errors).'
+    description='Identify and resolve differences between a Fedora Resource and Solr index.',
+    epilog='Exit code will be "0" if everything was up-to-date. If documents were updated, the exit code will be "1" (though may also be "1" due to runtime errors).'
 )
 # Connection arguments
 parser.add_argument('--ri', default="http://localhost:8080/fedora/risearch", help='URL of the resource index at the host. (default: %(default)s)')
@@ -36,6 +36,7 @@ group.add_argument('--since', type=int, help='Compare objects modified since the
 log_group = parser.add_mutually_exclusive_group()
 log_group.add_argument('--verbose', '-v', default=0, action='count', help='Adjust verbosity of output. More times == more verbose.')
 log_group.add_argument('--quiet', '-q', default=0, action='count', help='Adjust verbosity of output. More times == less verbose.')
+
 
 class ri_generator:
     """Generator object for Resource Index."""
@@ -67,7 +68,7 @@ class ri_generator:
         Yields 2-tuples, each consisting of a PID and a struct_time.
         """
         replacements = {
-          'filter': ''
+            'filter': ''
         }
         if self.start is not None:
             replacements['filter'] = 'FILTER(?timestamp >= "{0}"^^<http://www.w3.org/2001/XMLSchema#dateTime>)'.format(self.start)
@@ -113,7 +114,7 @@ ORDER BY ?timestamp ?obj
             query_result = json.loads(r.text)
 
             if len(query_result['results']) == 0:
-              break
+                break
 
             for result in query_result['results']:
                 yield (result['obj'].split('info:fedora/')[1], dateutil.parser.parse(result['timestamp']))
@@ -124,6 +125,7 @@ ORDER BY ?timestamp ?obj
             replacements['filter'] = 'FILTER(?timestamp > "{0}"^^<http://www.w3.org/2001/XMLSchema#dateTime>)'.format(self.start)
             data['query'] = query.format(**replacements)
             r = s.post(self.url, data=data)
+
 
 class solr_generator:
     """Generator object for Solr index."""
@@ -155,11 +157,11 @@ class solr_generator:
         Yields 2-tuples, each consisting of a PID and a struct_time.
         """
         params = {
-          'q': '*:*',
-          'sort': '{last_modified_field} asc, PID asc'.format(last_modified_field=self.field),
-          'wt': 'json',
-          'fl': 'PID {last_modified_field}'.format(last_modified_field=self.field),
-          'rows': self.limit
+            'q': '*:*',
+            'sort': '{last_modified_field} asc, PID asc'.format(last_modified_field=self.field),
+            'wt': 'json',
+            'fl': 'PID {last_modified_field}'.format(last_modified_field=self.field),
+            'rows': self.limit
         }
         if self.start is not None:
             params['fq'] = ["{0}:{{1} TO *}".format(self.field, self.start)]
@@ -182,6 +184,7 @@ class solr_generator:
 
             params['fq'] = ["{0}:{{{1} TO *}}".format(self.field, self.start)]
             r = requests.post(self.url, data=params)
+
 
 class gsearch:
     """Helper class for prodding GSearch."""
@@ -206,12 +209,12 @@ class gsearch:
     def update_pid(self, pid):
         """Call to GSearch to update the given PID."""
         if not self.updated:
-          self.updated = True
+            self.updated = True
 
         data = {
-          'operation': 'updateIndex',
-          'action': 'fromPid',
-          'value': pid
+            'operation': 'updateIndex',
+            'action': 'fromPid',
+            'value': pid
         }
         logging.debug('Attempting to update {0}...'.format(pid))
         r = self.session.post(self.url, data=data)
@@ -269,7 +272,7 @@ if __name__ == '__main__':
                     gsearch.update_pid(solr_pid)
                     solr_result = solr.next()
                 else:
-                  # Same PID, same time, up-to-date... Skip!
+                    # Same PID, same time, up-to-date... Skip!
                     logging.debug('Docs appear equal for {0}.'.format(ri_pid))
                     ri_result = ri.next()
                     solr_result = solr.next()
@@ -277,7 +280,7 @@ if __name__ == '__main__':
         pass
 
     for ri_pid, ri_time in ri:
-        #Stuff left over from RI... Reindex.
+        # Stuff left over from RI... Reindex.
         logging.debug('RI, leftover: {0}'.format(ri_pid))
         gsearch.update_pid(ri_pid)
 
