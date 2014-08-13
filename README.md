@@ -1,4 +1,4 @@
-# ri-solr-diff [![Build Status](https://travis-ci.org/discoverygarden/ri-solr-diff.png?branch=1.x)](https://travis-ci.org/discoverygarden/ri-solr-diff)
+# ri-solr-diff
 
 ## Introduction
 
