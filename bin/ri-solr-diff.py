@@ -70,7 +70,7 @@ class ri_generator:
           'filter': ''
         }
         if self.start is not None:
-            replacements['filter'] = 'FILTER(?timestamp >= "%s"^^<http://www.w3.org/2001/XMLSchema#dateTime>)' % (self.start)
+            replacements['filter'] = 'FILTER(?timestamp >= "{0}"^^<http://www.w3.org/2001/XMLSchema#dateTime>)'.format(self.start)
 
         # XXX: The OPTIONAL/?exclude bit prevents documents we usually avoid
         # indexing into Solr from being selected. Since they should not be in
@@ -79,28 +79,28 @@ class ri_generator:
         query = '''
 SELECT ?obj ?timestamp
 FROM <#ri>
-WHERE {
+WHERE {{
   ?obj <fedora-model:hasModel> <info:fedora/fedora-system:FedoraObject-3.0> ;
        <fedora-model:state> <fedora-model:Active> ;
        <fedora-view:lastModifiedDate> ?timestamp .
-  OPTIONAL {
+  OPTIONAL {{
     ?obj <fedora-view:disseminates> ?exclude .
-    {
+    {{
       ?exclude <fedora-view:disseminationType> <info:fedora/*/DS-COMPOSITE-MODEL> .
-    } UNION {
+    }} UNION {{
       ?exclude <fedora-view:disseminationType> <info:fedora/*/METHODMAP> .
-    }
-  }
+    }}
+  }}
   FILTER(!bound(?exclude))
-  %(filter)s
-}
+  {filter}
+}}
 ORDER BY ?timestamp ?obj
 '''
         data = {
             'type': 'tuples',
             'format': 'json',
             'lang': 'sparql',
-            'query': query % replacements,
+            'query': query.format(**replacements),
             'limit': self.limit
         }
         s = requests.Session()
@@ -121,8 +121,8 @@ ORDER BY ?timestamp ?obj
             # Grab the last timestamp, to start from it.
             self.start = query_result['results'][-1]['timestamp']
 
-            replacements['filter'] = 'FILTER(?timestamp > "%s"^^<http://www.w3.org/2001/XMLSchema#dateTime>)' % (self.start)
-            data['query'] = query % replacements
+            replacements['filter'] = 'FILTER(?timestamp > "{0}"^^<http://www.w3.org/2001/XMLSchema#dateTime>)'.format(self.start)
+            data['query'] = query.format(**replacements)
             r = s.post(self.url, data=data)
 
 class solr_generator:
@@ -143,7 +143,7 @@ class solr_generator:
                  memory usage.
         """
         self.base_url = url
-        self.url = "%s/select" % url
+        self.url = "{base_url}/select".format(base_url=url)
         self.field = field
         self.start = start
         self.limit = limit
@@ -156,13 +156,13 @@ class solr_generator:
         """
         params = {
           'q': '*:*',
-          'sort': '%s asc, PID asc' % self.field,
+          'sort': '{last_modified_field} asc, PID asc'.format(last_modified_field=self.field),
           'wt': 'json',
-          'fl': 'PID %s' % self.field,
+          'fl': 'PID {last_modified_field}'.format(last_modified_field=self.field),
           'rows': self.limit
         }
         if self.start is not None:
-            params['fq'] = ["%s:{%s TO *}" % (self.field, self.start)]
+            params['fq'] = ["{0}:{{1} TO *}".format(self.field, self.start)]
 
         r = requests.post(self.url, data=params)
 
@@ -180,7 +180,7 @@ class solr_generator:
             # Grab the last timestamp, to start from it.
             self.start = query_results['response']['docs'][-1][self.field]
 
-            params['fq'] = ["%s:{%s TO *}" % (self.field, self.start)]
+            params['fq'] = ["{0}:{{{1} TO *}}".format(self.field, self.start)]
             r = requests.post(self.url, data=params)
 
 class gsearch:
@@ -213,13 +213,13 @@ class gsearch:
           'action': 'fromPid',
           'value': pid
         }
-        logging.debug('Attempting to update %s...' % pid)
+        logging.debug('Attempting to update {0}...'.format(pid))
         r = self.session.post(self.url, data=data)
         if r.status_code == requests.codes.ok:
-            logging.debug('Updated %s' % pid)
+            logging.debug('Updated {0}'.format(pid))
             logging.info(pid)
         else:
-            logging.debug('Failed to update %s?' % pid)
+            logging.debug('Failed to update {0}?'.format(pid))
 
 if __name__ == '__main__':
     args = parser.parse_args()
@@ -251,26 +251,26 @@ if __name__ == '__main__':
             solr_pid, solr_time = solr_result
 
             if ri_time < solr_time:
-                logging.debug('RI older, update %s.' % ri_pid)
+                logging.debug('RI older, update {0}.'.format(ri_pid))
                 gsearch.update_pid(ri_pid)
                 ri_result = ri.next()
             elif solr_time < ri_time:
-                logging.debug('Solr older, update %s.' % solr_pid)
+                logging.debug('Solr older, update {0}.'.format(solr_pid))
                 gsearch.update_pid(solr_pid)
                 solr_result = solr.next()
             else:
                 # Hit stuff with the same time... Start comparing PIDs.
                 if ri_pid < solr_pid:
-                    logging.debug('RI pid, update %s.' % ri_pid)
+                    logging.debug('RI pid, update {0}.'.format(ri_pid))
                     gsearch.update_pid(ri_pid)
                     ri_result = ri.next()
                 elif solr_pid < ri_pid:
-                    logging.debug('Solr pid, update %s.' % solr_pid)
+                    logging.debug('Solr pid, update {0}.'.format(solr_pid))
                     gsearch.update_pid(solr_pid)
                     solr_result = solr.next()
                 else:
                   # Same PID, same time, up-to-date... Skip!
-                    logging.debug('Docs appear equal for %s.' % ri_pid)
+                    logging.debug('Docs appear equal for {0}.'.format(ri_pid))
                     ri_result = ri.next()
                     solr_result = solr.next()
     except StopIteration:
@@ -278,14 +278,14 @@ if __name__ == '__main__':
 
     for ri_pid, ri_time in ri:
         #Stuff left over from RI... Reindex.
-        logger.debug('RI, leftover: %s' % ri_pid)
+        logging.debug('RI, leftover: {0}'.format(ri_pid))
         gsearch.update_pid(ri_pid)
 
     for solr_pid, solr_time in solr:
         # Stuff left over from Solr. Recently indexed and purged, but index
         # failed to update... Should probably delete...  Let's just try
         # reindexing.
-        logger.debug('Solr, leftover: %s' % ri_pid)
+        logging.debug('Solr, leftover: {0}'.format(solr_pid))
         gsearch.update_pid(solr_pid)
 
     if gsearch.updated:
