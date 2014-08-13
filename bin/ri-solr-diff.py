@@ -171,8 +171,8 @@ class solr_generator:
             # from working?
             query_results = json.loads(r.text)
 
-            if query_results['response']['numFound'] == 0:
-              break
+            if query_results['response']['numFound'] == 0 or len(query_results['response']['docs']) == 0:
+                break
 
             for result in query_results['response']['docs']:
                 yield (result['PID'], dateutil.parser.parse(result[self.field]))
