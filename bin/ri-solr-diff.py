@@ -310,7 +310,8 @@ if __name__ == '__main__':
         # failed to update... Should probably delete...  Let's just try
         # reindexing.
         logging.debug('Solr, leftover: {0}'.format(solr_pid))
-        gsearch.update_pid(solr_pid)
+        if not args.keep_docs:
+            gsearch.delete_pid(solr_pid)
 
     if gsearch.updated:
         exit(1)
