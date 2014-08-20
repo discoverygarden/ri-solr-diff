@@ -21,6 +21,7 @@ parser.add_argument('--ri-user', default='fedoraAdmin', help='Username to commun
 parser.add_argument('--ri-pass', default='islandora', help='Password to communicate with resource index. (default: %(default)s)')
 parser.add_argument('--solr', default="http://localhost:8080/solr", help='URL of the Solr end-point. (default: %(default)s)')
 parser.add_argument('--solr-last-modified-field', default='fgs_lastModifiedDate_dt', help='The Solr field storing the last modified date of each object. (default: %(default)s)')
+parser.add_argument('--solr-keep-docs', default=False, action='store_true', help='Keep docs in Solr which do not appear to have related objects in Fedora. The default is to delete Solr documents in this state.')
 parser.add_argument('--gsearch', default="http://localhost:8080/fedoragsearch/rest", help="URL of the GSearch end-point. (default: %(default)s)")
 parser.add_argument('--gsearch-user', default='fedoraAdmin', help='Username to communicate with GSearch servelet. (default: %(default)s)')
 parser.add_argument('--gsearch-pass', default='islandora', help='Password to communicate with GSearch servelet. (default: %(default)s)')
@@ -224,6 +225,23 @@ class gsearch:
         else:
             logging.debug('Failed to update {0}?'.format(pid))
 
+    def delete_pid(self, pid):
+        """Call to GSearch to delete the given PID."""
+        if not self.updated:
+            self.updated = True
+
+        data = {
+            'operation': 'updateIndex',
+            'action': 'deletePid',
+            'value': pid
+        }
+        logging.debug('Attempting to delete {0}...'.format(pid))
+        r = self.session.post(self.url, data=data)
+        if r.status_code == requests.codes.ok:
+            logging.debug('Deleted {0}'.format(pid))
+        else:
+            logging.debug('Failed to delete {0}?'.format(pid))
+
 if __name__ == '__main__':
     args = parser.parse_args()
     logging.getLogger().setLevel(logging.INFO + (-args.verbose + args.quiet) * 10)
@@ -289,7 +307,8 @@ if __name__ == '__main__':
         # failed to update... Should probably delete...  Let's just try
         # reindexing.
         logging.debug('Solr, leftover: {0}'.format(solr_pid))
-        gsearch.update_pid(solr_pid)
+        if not args.solr_keep_docs:
+            gsearch.delete_pid(solr_pid)
 
     if gsearch.updated:
         exit(1)
