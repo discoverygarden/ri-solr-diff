@@ -169,7 +169,7 @@ class solr_generator:
             'rows': self.limit
         }
         if self.start is not None:
-            params['fq'] = ["{0}:{{1} TO *}".format(self.field, self.start)]
+            params['fq'] = ["{0}:{{{1} TO *}}".format(self.field, self.start)]
 
         r = requests.post(self.url, data=params)
 
