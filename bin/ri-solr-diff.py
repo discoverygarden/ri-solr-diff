@@ -130,6 +130,8 @@ ORDER BY ?timestamp ?obj
             replacements['filter'] = 'FILTER(?timestamp > "{0}"^^<http://www.w3.org/2001/XMLSchema#dateTime>)'.format(self.start)
             data['query'] = query.format(**replacements)
             r = s.post(self.url, data=data)
+        else:
+            raise Exception('RI query failed with HTTP code {0}.'.format(r.status_code))
 
 
 class solr_generator:
@@ -189,6 +191,8 @@ class solr_generator:
 
             params['fq'] = ["{0}:{{{1} TO *}}".format(self.field, self.start)]
             r = requests.post(self.url, data=params)
+        else:
+            raise Exception('Solr query failed with HTTP code {0}.'.format(r.status_code))
 
 
 class gsearch:
@@ -228,7 +232,8 @@ class gsearch:
             logging.debug('Updated {0}'.format(pid))
             logging.info(pid)
         else:
-            logging.debug('Failed to update {0}?'.format(pid))
+            reason = 'Not in Fedora' if r.status_code == requests.codes.ok and 'Object not found in low-level storage' in r.text else 'HTTP code {0}'.format(r.status_code)
+            logging.debug('Failed to update {0} ({1}).'.format(pid, reason))
             if not self.keep_docs:
                 self.delete_pid(pid)
 
@@ -247,7 +252,7 @@ class gsearch:
         if r.status_code == requests.codes.ok:
             logging.debug('Deleted {0}'.format(pid))
         else:
-            logging.debug('Failed to delete {0}?'.format(pid))
+            logging.debug('Failed to delete {0} (HTTP code {1}).'.format(pid, r.status_code))
 
 if __name__ == '__main__':
     args = parser.parse_args()
