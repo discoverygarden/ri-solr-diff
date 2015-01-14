@@ -131,7 +131,7 @@ ORDER BY ?timestamp ?obj
             data['query'] = query.format(**replacements)
             r = s.post(self.url, data=data)
         else:
-            raise Exception('RI query failed with HTTP code {0}.'.format(r.status_code))
+            raise Exception('RI query failed with HTTP code {0}. Body: {1}'.format(r.status_code, r.text))
 
 
 class solr_generator:
