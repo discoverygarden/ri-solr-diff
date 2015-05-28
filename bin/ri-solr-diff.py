@@ -82,13 +82,9 @@ class ri_generator:
 SELECT ?obj ?timestamp
 FROM <#ri>
 WHERE {{
-  ?obj <fedora-model:hasModel> <info:fedora/fedora-system:FedoraObject-3.0> .
-  {{
-    ?obj <fedora-model:state> <fedora-model:Deleted> .
-    }} UNION {{
-    ?obj <fedora-model:state> <fedora-model:Active> .
-  }}
-  ?obj <fedora-view:lastModifiedDate> ?timestamp .
+  ?obj <fedora-model:hasModel> <info:fedora/fedora-system:FedoraObject-3.0> ;
+       <fedora-model:state> <fedora-model:Active> ;
+       <fedora-view:lastModifiedDate> ?timestamp .
   OPTIONAL {{
     ?obj <fedora-view:disseminates> ?exclude .
     {{
