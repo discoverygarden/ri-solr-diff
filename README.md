@@ -2,7 +2,7 @@
 
 ## Introduction
 
-A utility to identify and resolve differences between a Fedora Commons installation and a Solr index of the contents of the given Fedora Commons installation.
+A utility to identify and resolve differences between a Fedora Commons installation and a Solr index of the contents of the given Fedora Commons installation. Also provides a utility to re-index a list of PIDs given a file input from stdIn.
 
 ## Requirements
 
@@ -27,13 +27,13 @@ cd ri-solr-diff
 python setup.py install
 ```
 
-It is also possible (though more work) to resolve the dependencies of requests and python-dateutil and to make it available when running `ri-solr-diff.py` on its own (or directly through the interpreter, anyway).
+It is also possible (though more work) to resolve the dependencies of requests and python-dateutil and to make it available when running `ri_solr_diff.py` on its own (or directly through the interpreter, anyway).
 
 ## Usage
 
-Output of `ri-solr-diff.py --help`:
+Output of `ri_solr_diff.py --help`:
 ```
-usage: ri-solr-diff.py [-h] [--ri RI] [--ri-user RI_USER] [--ri-pass RI_PASS]
+usage: ri_solr_diff.py [-h] [--ri RI] [--ri-user RI_USER] [--ri-pass RI_PASS]
                        [--solr SOLR]
                        [--solr-last-modified-field SOLR_LAST_MODIFIED_FIELD]
                        [--gsearch GSEARCH] [--gsearch-user GSEARCH_USER]
@@ -83,6 +83,28 @@ optional arguments:
 Exit code will be "0" if everything was up-to-date. If documents were updated,
 the exit code will be "1" (though may also be "1" due to runtime errors).
 ```
+Output of `solr_reindex.py --help`:
+```
+usage: solr_reindex.py [-h] [--gsearch GSEARCH] [--gsearch-user GSEARCH_USER]
+                       [--gsearch-pass GSEARCH_PASS]
+
+Trigger a Solr re-index for a list of PIDs parsed from CSV.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --gsearch GSEARCH     URL of the GSearch end-point. (default:
+                        http://localhost:8080/fedoragsearch/rest)
+  --gsearch-user GSEARCH_USER
+                        Username to communicate with GSearch servelet.
+                        (default: fedoraAdmin)
+  --gsearch-pass GSEARCH_PASS
+                        Password to communicate with GSearch servelet.
+                        (default: islandora)
+
+Exit code will be "1" if re-index was succcesful, "0" otherwise.
+```
+
+Example of Solr re-indexing: `solr_reindex.py < /mydirectory/file.txt`
 
 ## Maintainers/Sponsors
 
@@ -93,3 +115,4 @@ Current maintainers:
 ## License
 
 [GPLv3](http://www.gnu.org/licenses/gpl-3.0.txt)
+

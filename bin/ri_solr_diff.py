@@ -106,7 +106,6 @@ ORDER BY ?timestamp ?obj
             'query': query.format(**replacements),
             'limit': self.limit
         }
-        logging.debug(data)
         s = requests.Session()
         s.auth = (self.user, self.password)
         r = s.post(self.url, data=data)
@@ -271,14 +270,16 @@ if __name__ == '__main__':
          logging.debug('The config file does not exist.')
          exit(-1)
     logging.getLogger().setLevel(logging.INFO + (-args.verbose + args.quiet) * 10)
+    
     start = None
     timestamp = 0
     if args.last_n_days:
-      timestamp = time.time() - (24 * 3600 * args.last_n_days)
+        timestamp = time.time() - (24 * 3600 * args.last_n_days)
     elif args.last_n_seconds:
-      timestamp = time.time() - args.last_n_seconds
+        timestamp = time.time() - args.last_n_seconds
     elif args.since:
-      timestamp = args.since
+        timestamp = args.since
+
     if not args.all:
       # Use "timestamp" to set "start"
       start = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(timestamp))
