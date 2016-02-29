@@ -10,7 +10,10 @@ setup(
   maintainer='discoverygarden Inc.',
   maintainer_email='dev@discoverygarden.ca',
   url='http://github.com/discoverygarden/ri-solr-diff',
-  scripts=['bin/ri-solr-diff.py'],
+  scripts=[
+    'bin/ri_solr_diff.py',
+    'bin/solr_reindex.py',
+  ],
   install_requires=[
     'requests',
     'python-dateutil'
