@@ -25,11 +25,11 @@ if __name__ == '__main__':
     gsearch = gsearch(args.gsearch, args.gsearch_user, args.gsearch_pass, False)
     pids = csv.reader(sys.stdin)
     for row in pids:
-       pid = row[0]
-       if ':' in pid:
-         gsearch.update_pid(pid)
-       else:
-         logging.debug('Parsed pid {0} is not a valid pid.'.format(pid))
+        pid = row[0]
+        if ':' in pid:
+             gsearch.update_pid(pid)
+        else:
+            logging.debug('Parsed pid {0} is not a valid pid.'.format(pid))
     if gsearch.updated:
         exit(1)
     else:

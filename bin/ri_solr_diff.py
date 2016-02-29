@@ -270,7 +270,7 @@ if __name__ == '__main__':
          logging.debug('The config file does not exist.')
          exit(-1)
     logging.getLogger().setLevel(logging.INFO + (-args.verbose + args.quiet) * 10)
-    
+
     start = None
     timestamp = 0
     if args.last_n_days:
@@ -281,8 +281,8 @@ if __name__ == '__main__':
         timestamp = args.since
 
     if not args.all:
-      # Use "timestamp" to set "start"
-      start = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(timestamp))
+        # Use "timestamp" to set "start"
+        start = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(timestamp))
     ri = iter(ri_generator(args.ri, args.ri_user, args.ri_pass, start=start, limit=args.query_limit))
     solr = iter(solr_generator(args.solr, args.solr_last_modified_field, start=start, limit=args.query_limit))
     gsearch = gsearch(args.gsearch, args.gsearch_user, args.gsearch_pass, args.keep_docs)
