@@ -13,7 +13,7 @@ logging.getLogger('requests').setLevel(logging.WARNING)
 
 parser = argparse.ArgumentParser(
     description='Identify and resolve differences between a Fedora Resource and Solr index.',
-    epilog='Exit code will be "0" if everything was up-to-date. If documents were updated, the exit code will be "1" (though may also be "1" due to runtime errors).'
+    epilog='Exit code will be "0" if everything was up-to-date. If documents were updated, the exit code will be "1" (though may also be "1" due to runtime errors). If config-file is specified and it does not exist "-1" will be exited with.'
 )
 # Connection arguments
 parser.add_argument('--ri', default="http://localhost:8080/fedora/risearch", help='URL of the resource index at the host. (default: %(default)s)')
@@ -33,6 +33,7 @@ group.add_argument('--all', help='Compare all objects.', action='store_true')
 group.add_argument('--last-n-days', type=int, help='Compare objects modified in the last n days.')
 group.add_argument('--last-n-seconds', type=int, help='Compare objects modified in the last n seconds.')
 group.add_argument('--since', type=int, help='Compare objects modified since the given Unix timestamp.')
+group.add_argument('--config-file', help='Provide a JSON configuration file of arguments to be used in place of the CLI.')
 
 log_group = parser.add_mutually_exclusive_group()
 log_group.add_argument('--verbose', '-v', default=0, action='count', help='Adjust verbosity of output. More times == more verbose.')
@@ -252,6 +253,22 @@ class gsearch:
 
 if __name__ == '__main__':
     args = parser.parse_args()
+    logging.getLogger().setLevel(logging.DEBUG)
+    if args.config_file:
+      allowed_args = {'ri': 'ri', 'ri-user': 'ri_user', 'ri-pass': 'ri_pass', 'solr': 'solr', 'solr-last-modified-field':'solr_last_modified_field', 'keep-docs': 'keep_docs', 'gsearch': 'gsearch', 'gsearch-user': 'gsearch_user', 'gsearch-pass': 'gsearch_pass', 'query-limit': 'query_limit', 'all': 'all', 'last-n-days': 'last_n_days', 'last-n-seconds': 'last_n_seconds', 'since': 'since', 'verbose': 'verbose', 'quiet': 'quiet'}
+      try:
+        with open(args.config_file) as data_file:    
+          try:
+            data = json.load(data_file)
+            for key in data:
+              if key in allowed_args:
+                setattr(args, allowed_args[key], data[key])
+          except:
+            logging.debug('No JSON to be parsed.')
+            exit(-1)
+      except IOError:
+         logging.debug('The config file does not exist.')
+         exit(-1)
     logging.getLogger().setLevel(logging.INFO + (-args.verbose + args.quiet) * 10)
 
     start = None
