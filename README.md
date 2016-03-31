@@ -122,7 +122,7 @@ Optionally a JSON configuration file can be specified in place of command-line a
    "ri-pass":"islandora",
    "solr":"http:\/\/localhost:8080\/solr",
    "solr-last-modified-field":"fgs_lastModifiedDate_dt",
-   "keep-docs":"keep-docs",
+   "keep-docs":true,
    "gsearch":"http:\/\/localhost:8080\/fedoragsearch\/rest",
    "gsearch-user":"fedoraAdmin",
    "gsearch-pass":"islandora",
@@ -139,6 +139,10 @@ Example of Solr re-indexing: `solr_reindex.py < /mydirectory/file.txt`
 Current maintainers:
 
 * [discoverygarden Inc.](https://github.com/discoverygarden)
+
+Sponsors:
+
+* [United States Department of Agriculture: National Agricultural Library](https://www.nal.usda.gov/)
 
 ## License
 
