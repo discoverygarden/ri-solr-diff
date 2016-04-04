@@ -36,10 +36,11 @@ Output of `ri_solr_diff.py --help`:
 usage: ri_solr_diff.py [-h] [--ri RI] [--ri-user RI_USER] [--ri-pass RI_PASS]
                        [--solr SOLR]
                        [--solr-last-modified-field SOLR_LAST_MODIFIED_FIELD]
-                       [--gsearch GSEARCH] [--gsearch-user GSEARCH_USER]
+                       [--keep-docs] [--gsearch GSEARCH]
+                       [--gsearch-user GSEARCH_USER]
                        [--gsearch-pass GSEARCH_PASS]
                        [--query-limit QUERY_LIMIT]
-                       (--all | --last-n-days LAST_N_DAYS | --last-n-seconds LAST_N_SECONDS | --since SINCE)
+                       (--all | --last-n-days LAST_N_DAYS | --last-n-seconds LAST_N_SECONDS | --since SINCE | --config-file CONFIG_FILE)
                        [--verbose | --quiet]
 
 Identify and resolve differences between a Fedora Resource and Solr index.
@@ -57,6 +58,9 @@ optional arguments:
   --solr-last-modified-field SOLR_LAST_MODIFIED_FIELD
                         The Solr field storing the last modified date of each
                         object. (default: fgs_lastModifiedDate_dt)
+  --keep-docs           Keep docs in Solr which do not appear to have related
+                        objects in Fedora. The default is to delete Solr
+                        documents in this state.
   --gsearch GSEARCH     URL of the GSearch end-point. (default:
                         http://localhost:8080/fedoragsearch/rest)
   --gsearch-user GSEARCH_USER
@@ -75,13 +79,17 @@ optional arguments:
                         Compare objects modified in the last n seconds.
   --since SINCE         Compare objects modified since the given Unix
                         timestamp.
+  --config-file CONFIG_FILE
+                        Provide a JSON configuration file of arguments to be
+                        used in place of the CLI.
   --verbose, -v         Adjust verbosity of output. More times == more
                         verbose.
   --quiet, -q           Adjust verbosity of output. More times == less
                         verbose.
 
 Exit code will be "0" if everything was up-to-date. If documents were updated,
-the exit code will be "1" (though may also be "1" due to runtime errors).
+the exit code will be "1" (though may also be "1" due to runtime errors). If
+config-file is specified and it does not exist "-1" will be exited with.
 ```
 Output of `solr_reindex.py --help`:
 ```
@@ -104,6 +112,26 @@ optional arguments:
 Exit code will be "1" if re-index was succcesful, "0" otherwise.
 ```
 
+Configuration file:
+
+Optionally a JSON configuration file can be specified in place of command-line arguments using the `--config-file` argument. The configuration file will contain key/value pairs of any of the allowed arguments such as:
+```json
+{
+   "ri":"http:\/\/localhost:8080\/fedora\/risearch",
+   "ri-user":"fedoraAdmin",
+   "ri-pass":"islandora",
+   "solr":"http:\/\/localhost:8080\/solr",
+   "solr-last-modified-field":"fgs_lastModifiedDate_dt",
+   "keep-docs":true,
+   "gsearch":"http:\/\/localhost:8080\/fedoragsearch\/rest",
+   "gsearch-user":"fedoraAdmin",
+   "gsearch-pass":"islandora",
+   "query-limit":10000,
+   "all":true,
+   "verbose":true
+}
+```
+
 Example of Solr re-indexing: `solr_reindex.py < /mydirectory/file.txt`
 
 ## Maintainers/Sponsors
@@ -112,6 +140,11 @@ Current maintainers:
 
 * [discoverygarden Inc.](https://github.com/discoverygarden)
 
+Sponsors:
+
+* [United States Department of Agriculture: National Agricultural Library](https://www.nal.usda.gov/)
+
 ## License
 
 [GPLv3](http://www.gnu.org/licenses/gpl-3.0.txt)
+
