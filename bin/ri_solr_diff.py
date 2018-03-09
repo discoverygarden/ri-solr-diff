@@ -26,6 +26,7 @@ parser.add_argument('--gsearch', default="http://localhost:8080/fedoragsearch/re
 parser.add_argument('--gsearch-user', default='fedoraAdmin', help='Username to communicate with GSearch servelet. (default: %(default)s)')
 parser.add_argument('--gsearch-pass', default='islandora', help='Password to communicate with GSearch servelet. (default: %(default)s)')
 parser.add_argument('--query-limit', default=10000, type=int, help='The number of results which will be fetched from the RI and Solr at a time. (default: %(default)s)')
+parser.add_argument('--dryrun', default=False, help='Diff without making changes (default: %(default)s)')
 
 # Application switches
 group = parser.add_mutually_exclusive_group(required=True)
@@ -195,7 +196,7 @@ class solr_generator:
 class gsearch:
     """Helper class for prodding GSearch."""
 
-    def __init__(self, url, user, password, keep_docs):
+    def __init__(self, url, user, password, keep_docs, dryrun):
         """
         Constructor; stash state.
 
@@ -212,6 +213,7 @@ class gsearch:
         self.session.auth = (self.user, self.password)
         self.updated = False
         self.keep_docs = keep_docs
+        self.dryrun = dryrun
 
     def update_pid(self, pid):
         """Call to GSearch to update the given PID."""
@@ -223,16 +225,20 @@ class gsearch:
             'action': 'fromPid',
             'value': pid
         }
-        logging.debug('Attempting to update {0}...'.format(pid))
-        r = self.session.post(self.url, data=data)
-        if r.status_code == requests.codes.ok and not 'Object not found in low-level storage' in r.text:
-            logging.debug('Updated {0}'.format(pid))
-            logging.info(pid)
+        
+        if self.dryrun:
+            logging.info('Should update {0}...'.format(pid))
         else:
-            reason = 'Not in Fedora' if r.status_code == requests.codes.ok and 'Object not found in low-level storage' in r.text else 'HTTP code {0}'.format(r.status_code)
-            logging.debug('Failed to update {0} ({1}).'.format(pid, reason))
-            if not self.keep_docs:
-                self.delete_pid(pid)
+            logging.debug('Attempting to update {0}...'.format(pid))
+            r = self.session.post(self.url, data=data)
+            if r.status_code == requests.codes.ok and not 'Object not found in low-level storage' in r.text:
+                logging.debug('Updated {0}'.format(pid))
+                logging.info(pid)
+            else:
+                reason = 'Not in Fedora' if r.status_code == requests.codes.ok and 'Object not found in low-level storage' in r.text else 'HTTP code {0}'.format(r.status_code)
+                logging.debug('Failed to update {0} ({1}).'.format(pid, reason))
+                if not self.keep_docs:
+                    self.delete_pid(pid)
 
     def delete_pid(self, pid):
         """Call to GSearch to delete the given PID."""
@@ -244,12 +250,16 @@ class gsearch:
             'action': 'deletePid',
             'value': pid
         }
-        logging.debug('Attempting to delete {0}...'.format(pid))
-        r = self.session.post(self.url, data=data)
-        if r.status_code == requests.codes.ok:
-            logging.debug('Deleted {0}'.format(pid))
+        
+        if self.dryrun:
+            logging.info('Should delete {0}...'.format(pid))
         else:
-            logging.debug('Failed to delete {0} (HTTP code {1}).'.format(pid, r.status_code))
+            logging.debug('Attempting to delete {0}...'.format(pid))
+            r = self.session.post(self.url, data=data)
+            if r.status_code == requests.codes.ok:
+                logging.debug('Deleted {0}'.format(pid))
+            else:
+                logging.debug('Failed to delete {0} (HTTP code {1}).'.format(pid, r.status_code))
 
 if __name__ == '__main__':
     args = parser.parse_args()
@@ -286,7 +296,7 @@ if __name__ == '__main__':
 
     ri = iter(ri_generator(args.ri, args.ri_user, args.ri_pass, start=start, limit=args.query_limit))
     solr = iter(solr_generator(args.solr, args.solr_last_modified_field, start=start, limit=args.query_limit))
-    gsearch = gsearch(args.gsearch, args.gsearch_user, args.gsearch_pass, args.keep_docs)
+    gsearch = gsearch(args.gsearch, args.gsearch_user, args.gsearch_pass, args.keep_docs, args.dryrun)
 
     try:
         ri_result = ri.next()
