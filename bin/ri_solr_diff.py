@@ -281,9 +281,27 @@ if __name__ == '__main__':
     args = parser.parse_args()
     logging.getLogger().setLevel(logging.DEBUG)
     if args.config_file:
-      allowed_args = {'ri': 'ri', 'ri-user': 'ri_user', 'ri-pass': 'ri_pass', 'solr': 'solr', 'solr-last-modified-field':'solr_last_modified_field', 'keep-docs': 'keep_docs', 'gsearch': 'gsearch', 'gsearch-user': 'gsearch_user', 'gsearch-pass': 'gsearch_pass', 'query-limit': 'query_limit', 'all': 'all', 'last-n-days': 'last_n_days', 'last-n-seconds': 'last_n_seconds', 'since': 'since', 'verbose': 'verbose', 'quiet': 'quiet'}
+      allowed_args = {
+        'ri': 'ri',
+        'ri-user': 'ri_user',
+        'ri-pass': 'ri_pass',
+        'solr': 'solr',
+        'solr-last-modified-field':'solr_last_modified_field',
+        'keep-docs': 'keep_docs',
+        'gsearch': 'gsearch',
+        'gsearch-user': 'gsearch_user',
+        'gsearch-pass': 'gsearch_pass',
+        'query-limit': 'query_limit',
+        'all': 'all',
+        'last-n-days': 'last_n_days',
+        'last-n-seconds': 'last_n_seconds',
+        'since': 'since',
+        'verbose': 'verbose',
+        'quiet': 'quiet',
+        'dryrun': 'dryrun'
+      }
       try:
-        with open(args.config_file) as data_file:    
+        with open(args.config_file) as data_file:
           try:
             data = json.load(data_file)
             for key in data:
