@@ -26,7 +26,7 @@ parser.add_argument('--gsearch', default="http://localhost:8080/fedoragsearch/re
 parser.add_argument('--gsearch-user', default='fedoraAdmin', help='Username to communicate with GSearch servelet. (default: %(default)s)')
 parser.add_argument('--gsearch-pass', default='islandora', help='Password to communicate with GSearch servelet. (default: %(default)s)')
 parser.add_argument('--query-limit', default=10000, type=int, help='The number of results which will be fetched from the RI and Solr at a time. (default: %(default)s)')
-parser.add_argument('--dryrun', default=False, help='Diff without making changes (default: %(default)s)')
+parser.add_argument('--dryrun', default=False, action='store_true', help='Diff without making changes (default: %(default)s)')
 
 # Application switches
 group = parser.add_mutually_exclusive_group(required=True)
