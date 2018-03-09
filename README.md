@@ -86,6 +86,8 @@ optional arguments:
                         verbose.
   --quiet, -q           Adjust verbosity of output. More times == less
                         verbose.
+  --dryrun              Diff without making changes.
+  
 
 Exit code will be "0" if everything was up-to-date. If documents were updated,
 the exit code will be "1" (though may also be "1" due to runtime errors). If
