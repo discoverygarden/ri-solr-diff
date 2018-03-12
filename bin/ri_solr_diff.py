@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import itertools
 import dateutil.parser
 import time
 import requests
@@ -80,6 +81,7 @@ class ri_generator:
         # the Solr index, we do not need to adjust the Solr query to account
         # for them.
         query = '''
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 SELECT ?obj ?timestamp
 FROM <#ri>
 WHERE {{
@@ -123,8 +125,9 @@ ORDER BY ?timestamp ?obj
 
             # Grab the last timestamp, to start from it.
             self.start = query_result['results'][-1]['timestamp']
+            start_pid = query_result['results'][-1]['obj']
 
-            replacements['filter'] = 'FILTER(?timestamp > "{0}"^^<http://www.w3.org/2001/XMLSchema#dateTime>)'.format(self.start)
+            replacements['filter'] = 'FILTER((?timestamp = "{0}"^^xsd:dateTime && xsd:string(?obj) > "{1}"^^xsd:string) || ?timestamp > "{0}"^^xsd:dateTime)'.format(self.start, start_pid)
             data['query'] = query.format(**replacements)
             r = s.post(self.url, data=data)
         else:
@@ -185,8 +188,9 @@ class solr_generator:
 
             # Grab the last timestamp, to start from it.
             self.start = query_results['response']['docs'][-1][self.field]
+            start_pid = query_results['response']['docs'][-1]['PID']
 
-            params['fq'] = ["{0}:{{{1} TO *}}".format(self.field, self.start)]
+            params['fq'] = ['({0}:"{1}" AND PID:{{{2} TO *}}) OR {0}:{{{1} TO *}}'.format(self.field, self.start, start_pid)]
             r = requests.post(self.url, data=params)
         else:
             raise Exception('Solr query failed with HTTP code {0}.'.format(r.status_code))
@@ -299,28 +303,45 @@ if __name__ == '__main__':
             if ri_time < solr_time:
                 logging.debug('RI older, update {0}.'.format(ri_pid))
                 gsearch.update_pid(ri_pid)
+                ri_result = False
                 ri_result = ri.next()
             elif solr_time < ri_time:
                 logging.debug('Solr older, update {0}.'.format(solr_pid))
                 gsearch.update_pid(solr_pid)
+                solr_result = False
                 solr_result = solr.next()
             else:
                 # Hit stuff with the same time... Start comparing PIDs.
                 if ri_pid < solr_pid:
                     logging.debug('RI pid, update {0}.'.format(ri_pid))
                     gsearch.update_pid(ri_pid)
+                    ri_result = False
                     ri_result = ri.next()
                 elif solr_pid < ri_pid:
                     logging.debug('Solr pid, update {0}.'.format(solr_pid))
                     gsearch.update_pid(solr_pid)
+                    solr_result = False
                     solr_result = solr.next()
                 else:
                     # Same PID, same time, up-to-date... Skip!
                     logging.debug('Docs appear equal for {0}.'.format(ri_pid))
+                    ri_result = False
+                    solr_result = False
                     ri_result = ri.next()
                     solr_result = solr.next()
     except StopIteration:
-        pass
+        # Prepend unconsumed items into their respective iterators.
+        try:
+            if ri_result:
+                ri = itertools.chain([ri_result], ri)
+        except NameError:
+            pass
+
+        try:
+            if solr_result:
+                solr = itertools.chain([solr_result], solr)
+        except NameError:
+            pass
 
     for ri_pid, ri_time in ri:
         # Stuff left over from RI... Reindex.
