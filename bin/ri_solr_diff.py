@@ -27,6 +27,7 @@ parser.add_argument('--gsearch', default="http://localhost:8080/fedoragsearch/re
 parser.add_argument('--gsearch-user', default='fedoraAdmin', help='Username to communicate with GSearch servelet. (default: %(default)s)')
 parser.add_argument('--gsearch-pass', default='islandora', help='Password to communicate with GSearch servelet. (default: %(default)s)')
 parser.add_argument('--query-limit', default=10000, type=int, help='The number of results which will be fetched from the RI and Solr at a time. (default: %(default)s)')
+parser.add_argument('--dryrun', default=False, action='store_true', help='Diff without making changes (default: %(default)s)')
 
 # Application switches
 group = parser.add_mutually_exclusive_group(required=True)
@@ -227,6 +228,7 @@ class gsearch:
             'action': 'fromPid',
             'value': pid
         }
+
         logging.debug('Attempting to update {0}...'.format(pid))
         r = self.session.post(self.url, data=data)
         if r.status_code == requests.codes.ok and not 'Object not found in low-level storage' in r.text:
@@ -248,6 +250,7 @@ class gsearch:
             'action': 'deletePid',
             'value': pid
         }
+
         logging.debug('Attempting to delete {0}...'.format(pid))
         r = self.session.post(self.url, data=data)
         if r.status_code == requests.codes.ok:
@@ -255,13 +258,54 @@ class gsearch:
         else:
             logging.debug('Failed to delete {0} (HTTP code {1}).'.format(pid, r.status_code))
 
+class gsearch_dryrun:
+    """Helper class to represent GSearch API actions."""
+
+    def __init__(self):
+        """
+        Constructor; stash state.
+        """
+        self.updated = False
+
+    def update_pid(self, pid):
+        """Log action of for actual run with the given PID."""
+        if not self.updated:
+            self.updated = True
+
+        logging.info('Should update {0}'.format(pid))
+
+    def delete_pid(self, pid):
+        """Call to GSearch to delete the given PID."""
+        if not self.updated:
+            self.updated = True
+
+        logging.info('Should delete {0}'.format(pid))
+
 if __name__ == '__main__':
     args = parser.parse_args()
     logging.getLogger().setLevel(logging.DEBUG)
     if args.config_file:
-      allowed_args = {'ri': 'ri', 'ri-user': 'ri_user', 'ri-pass': 'ri_pass', 'solr': 'solr', 'solr-last-modified-field':'solr_last_modified_field', 'keep-docs': 'keep_docs', 'gsearch': 'gsearch', 'gsearch-user': 'gsearch_user', 'gsearch-pass': 'gsearch_pass', 'query-limit': 'query_limit', 'all': 'all', 'last-n-days': 'last_n_days', 'last-n-seconds': 'last_n_seconds', 'since': 'since', 'verbose': 'verbose', 'quiet': 'quiet'}
+      allowed_args = {
+        'ri': 'ri',
+        'ri-user': 'ri_user',
+        'ri-pass': 'ri_pass',
+        'solr': 'solr',
+        'solr-last-modified-field':'solr_last_modified_field',
+        'keep-docs': 'keep_docs',
+        'gsearch': 'gsearch',
+        'gsearch-user': 'gsearch_user',
+        'gsearch-pass': 'gsearch_pass',
+        'query-limit': 'query_limit',
+        'all': 'all',
+        'last-n-days': 'last_n_days',
+        'last-n-seconds': 'last_n_seconds',
+        'since': 'since',
+        'verbose': 'verbose',
+        'quiet': 'quiet',
+        'dryrun': 'dryrun'
+      }
       try:
-        with open(args.config_file) as data_file:    
+        with open(args.config_file) as data_file:
           try:
             data = json.load(data_file)
             for key in data:
@@ -290,7 +334,7 @@ if __name__ == '__main__':
 
     ri = iter(ri_generator(args.ri, args.ri_user, args.ri_pass, start=start, limit=args.query_limit))
     solr = iter(solr_generator(args.solr, args.solr_last_modified_field, start=start, limit=args.query_limit))
-    gsearch = gsearch(args.gsearch, args.gsearch_user, args.gsearch_pass, args.keep_docs)
+    gsearch = gsearch_dryrun() if args.dryrun else gsearch(args.gsearch, args.gsearch_user, args.gsearch_pass, args.keep_docs)
 
     try:
         ri_result = ri.next()
