@@ -42,6 +42,7 @@ usage: ri_solr_diff.py [-h] [--ri RI] [--ri-user RI_USER] [--ri-pass RI_PASS]
                        [--query-limit QUERY_LIMIT]
                        (--all | --last-n-days LAST_N_DAYS | --last-n-seconds LAST_N_SECONDS | --since SINCE | --config-file CONFIG_FILE)
                        [--verbose | --quiet]
+                       [--dryrun]
 
 Identify and resolve differences between a Fedora Resource and Solr index.
 
