@@ -39,7 +39,7 @@ usage: ri_solr_diff.py [-h] [--ri RI] [--ri-user RI_USER] [--ri-pass RI_PASS]
                        [--keep-docs] [--gsearch GSEARCH]
                        [--gsearch-user GSEARCH_USER]
                        [--gsearch-pass GSEARCH_PASS]
-                       [--query-limit QUERY_LIMIT]
+                       [--query-limit QUERY_LIMIT] [--dryrun]
                        (--all | --last-n-days LAST_N_DAYS | --last-n-seconds LAST_N_SECONDS | --since SINCE | --config-file CONFIG_FILE)
                        [--verbose | --quiet]
 
@@ -72,6 +72,7 @@ optional arguments:
   --query-limit QUERY_LIMIT
                         The number of results which will be fetched from the
                         RI and Solr at a time. (default: 10000)
+  --dryrun              Diff without making changes (default: False)
   --all                 Compare all objects.
   --last-n-days LAST_N_DAYS
                         Compare objects modified in the last n days.
@@ -85,9 +86,7 @@ optional arguments:
   --verbose, -v         Adjust verbosity of output. More times == more
                         verbose.
   --quiet, -q           Adjust verbosity of output. More times == less
-                        verbose.
-  --dryrun              Diff without making changes.
-  
+                        verbose.  
 
 Exit code will be "0" if everything was up-to-date. If documents were updated,
 the exit code will be "1" (though may also be "1" due to runtime errors). If
